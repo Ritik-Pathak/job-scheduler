@@ -1,0 +1,12 @@
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.env
+scheduler.db
+.mypy_cache/
+.pytest_cache/
+dist/
+build/
+.migrations/

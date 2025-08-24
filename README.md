@@ -1,0 +1,79 @@
+# Scheduler Service (FastAPI + APScheduler)
+
+A production-ready proof-of-concept scheduler microservice that supports creating, listing,
+and fetching scheduled jobs. Jobs are stored in a database with metadata (name, params,
+last run, next run, status). APScheduler handles execution and persistence of the *actual*
+schedules. API is self-documented with Swagger (OpenAPI).
+
+## Features
+- **Job Scheduling** with cron or interval triggers
+- **API Endpoints**
+  - `GET /jobs` — list jobs
+  - `GET /jobs/{id}` — fetch by ID
+  - `POST /jobs` — create a job
+- **Database Integration** via SQLAlchemy (jobs table) + APScheduler SQLAlchemyJobStore
+- **Customization** per-job parameters (arbitrary JSON)
+- **Scalability-Ready** architecture notes in `SCALING.md`
+- **SOLID**-oriented module boundaries (repos, services, API layers)
+- **Auto API Docs** at `/docs` and `/redoc`
+
+## Quickstart
+
+### 1) Configure environment
+Create `.env` in the project root (or export these variables):
+```
+# Use SQLite works for local dev.
+# DATABASE_URL=sqlite:///./scheduler.db
+
+APP_ENV=dev
+TZ=Asia/Kolkata
+```
+### 2) Install & run
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -e .
+uvicorn app.main:app --reload
+```
+
+Open http://127.0.0.1:8000/docs
+
+## Example payloads
+
+### Create a weekly (every Monday 09:00) email job
+```json
+{
+  "name": "test_monday_email_blast",
+  "trigger": "cron",
+  "cron": { "day_of_week": "mon", "hour": 9, "minute": 0 },
+  "params": { "to": "team@example.com", "subject": "Weekly update" }
+}
+```
+
+### Create a 5-minute interval number crunch job
+```json
+{
+  "name": "num-crunch",
+  "trigger": "interval",
+  "interval": { "minutes": 5 },
+  "params": { "dataset": "dummy" }
+}
+```
+
+## Tests (lightweight)
+You can run the app and try the endpoints from the docs. The scheduler uses a background thread
+and persists jobs in the same DB so you can stop/start without losing schedules.
+
+## Migrations
+For a POC, you can auto-create tables on startup. For production, use alembic:
+```bash
+alembic init migrations
+# edit alembic.ini sqlalchemy.url and env.py target_metadata
+alembic revision --autogenerate -m "init"
+alembic upgrade head
+```
+
+## Notes
+- APScheduler persists triggers in its own tables; our `jobs` table stores human-friendly metadata and run stats.
+- Execution is simulated (email/compute) and logs to stdout; replace `executors.py` with your real jobs.
